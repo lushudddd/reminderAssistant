@@ -12,6 +12,16 @@
 
 点击提醒名称可以调整间隔。新建自定义提醒默认关闭。多个提醒同时到点时合并显示，弹窗提供「稍后 5 分钟」。关闭主窗口会收起到托盘，从托盘菜单可完全退出。
 
+## 界面预览
+
+### 未启动
+
+![提醒助手未启动的主界面](docs/images/assistant-idle.png)
+
+### 运行中
+
+![提醒助手运行中的提醒列表](docs/images/assistant-running.png)
+
 ## 下载和安装
 
 [下载 Windows 安装包](downloads/TixingSetup.exe?raw=true)
