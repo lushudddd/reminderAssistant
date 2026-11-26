@@ -8,7 +8,7 @@ using Microsoft.Win32;
 
 class Setup : Form {
     const string App = "Tixing.exe";
-    const string Uninstaller = "TixingSetup.exe";
+    const string Uninstaller = "卸载提醒助手.exe";
     const string RegistryPath = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\Tixing";
     static readonly string Shortcut = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "提醒助手.lnk");
     readonly TextBox path = new TextBox();
@@ -18,11 +18,15 @@ class Setup : Form {
     [STAThread] static void Main(string[] args) {
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+#if UNINSTALLER
+        Remove();
+#else
         if (args.Length == 1 && args[0] == "--uninstall") {
             Remove();
             return;
         }
         Application.Run(new Setup());
+#endif
     }
     Setup() {
         Text="安装提醒助手";
@@ -74,8 +78,12 @@ class Setup : Form {
             string exe=Path.Combine(target,App);
             string setup=Path.Combine(target,Uninstaller);
             string installed=null;
+            string previousUninstall=null;
             using (var existing=Registry.CurrentUser.OpenSubKey(RegistryPath))
-                if (existing!=null) installed=existing.GetValue("InstallLocation") as string;
+                if (existing!=null) {
+                    installed=existing.GetValue("InstallLocation") as string;
+                    previousUninstall=existing.GetValue("UninstallString") as string;
+                }
             if (installed!=null && !string.Equals(installed.TrimEnd('\\'),target.TrimEnd('\\'),StringComparison.OrdinalIgnoreCase))
                 throw new IOException("请先卸载已有版本，或选择原来的安装位置。");
             bool update=installed!=null;
@@ -85,8 +93,11 @@ class Setup : Form {
             using (var payload=Assembly.GetExecutingAssembly().GetManifestResourceStream(App))
             using (var file=new FileStream(exe,update?FileMode.Create:FileMode.CreateNew))
                 payload.CopyTo(file);
-            if (!string.Equals(Application.ExecutablePath,setup,StringComparison.OrdinalIgnoreCase))
-                File.Copy(Application.ExecutablePath,setup,update);
+            using (var payload=Assembly.GetExecutingAssembly().GetManifestResourceStream("Uninstaller.exe"))
+            using (var file=new FileStream(setup,update?FileMode.Create:FileMode.CreateNew))
+                payload.CopyTo(file);
+            var legacy=Path.Combine(target,"TixingSetup.exe");
+            if (string.Equals(previousUninstall,Quote(legacy)+" --uninstall",StringComparison.OrdinalIgnoreCase) && !string.Equals(legacy,Application.ExecutablePath,StringComparison.OrdinalIgnoreCase)) File.Delete(legacy);
             var shellType=Type.GetTypeFromProgID("WScript.Shell");
             dynamic shell=Activator.CreateInstance(shellType);
             dynamic shortcut=shell.CreateShortcut(Shortcut);
@@ -97,7 +108,7 @@ class Setup : Form {
                 key.SetValue("DisplayName","提醒助手");
                 key.SetValue("InstallLocation",target);
                 key.SetValue("DisplayIcon",exe);
-                key.SetValue("UninstallString",Quote(setup)+" --uninstall");
+                key.SetValue("UninstallString",Quote(setup));
                 key.SetValue("NoModify",1);
                 key.SetValue("NoRepair",1);
             }
@@ -114,17 +125,24 @@ class Setup : Form {
     }
     static string Quote(string value) { return "\"" + value + "\""; }
     static void Remove() {
-        if (MessageBox.Show("卸载提醒助手？你的提醒设置会保留。","提醒助手",MessageBoxButtons.YesNo)!=DialogResult.Yes) return;
+        if (MessageBox.Show("卸载提醒助手并删除所有提醒设置？","提醒助手",MessageBoxButtons.YesNo)!=DialogResult.Yes) return;
         try {
             var folder=Path.GetDirectoryName(Application.ExecutablePath);
             File.Delete(Path.Combine(folder,App));
             File.Delete(Shortcut);
+            var settings=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Tixing");
+            File.Delete(Path.Combine(settings,"settings.xml"));
+            File.Delete(Path.Combine(settings,"settings.xml.tmp"));
+            if (Directory.Exists(settings) && Directory.GetFileSystemEntries(settings).Length==0)
+                Directory.Delete(settings);
             using (var run=Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run",true))
                 if (run!=null) run.DeleteValue("Tixing",false);
             Registry.CurrentUser.DeleteSubKeyTree(RegistryPath,false);
-            var command="ping 127.0.0.1 -n 3 > nul & del /q " + Quote(Application.ExecutablePath.Replace("%","%%"));
-            if (folder.IndexOfAny(new[]{'%','!'})<0)
-                Process.Start(new ProcessStartInfo("cmd.exe","/d /v:off /c "+command) { UseShellExecute=false, CreateNoWindow=true });
+            var command="ping 127.0.0.1 -n 3 > nul & del /q \"%TIXING_UNINSTALLER%\" & rd \"%TIXING_INSTALL_FOLDER%\"";
+            var cleanup=new ProcessStartInfo(Path.Combine(Environment.SystemDirectory,"cmd.exe"),"/d /v:off /c "+command) { UseShellExecute=false, CreateNoWindow=true };
+            cleanup.EnvironmentVariables["TIXING_UNINSTALLER"]=Application.ExecutablePath;
+            cleanup.EnvironmentVariables["TIXING_INSTALL_FOLDER"]=folder;
+            Process.Start(cleanup);
             MessageBox.Show("提醒助手已卸载。","提醒助手");
         } catch (Exception error) {
             MessageBox.Show("卸载未完成。请先从托盘退出提醒助手。\n"+error.Message,"提醒助手");

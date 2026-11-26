@@ -26,7 +26,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 构建后运行 `dist\TixingSetup.exe`。安装向导允许选择目标磁盘和文件夹，也可以勾选登录 Windows 时自动启动。应用内的「设置」可以随时修改自动启动选项。通过登录自启时，提醒助手会在托盘运行并开启总开关。
 
-设置保存在当前用户的 `%LOCALAPPDATA%\Tixing\settings.xml`。卸载时会保留提醒设置。
+设置保存在当前用户的 `%LOCALAPPDATA%\Tixing\settings.xml`。卸载时，从托盘退出助手，再双击安装目录中的「卸载提醒助手.exe」。确认后会删除提醒设置、快捷方式和自启项。
 
 ## 源代码
 
