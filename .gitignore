@@ -1,0 +1,6 @@
+/dist/
+/local-test/
+/.vs/
+/bin/
+/obj/
+*.user
