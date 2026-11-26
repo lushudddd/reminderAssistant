@@ -241,18 +241,30 @@ class Assistant : Form {
     void AddRow(Reminder item) {
         var accent = ColorTranslator.FromHtml(item.Accent);
         var card = new Panel { Height=55, BackColor=Color.White, Margin=new Padding(0,0,0,7) };
-        card.Controls.Add(new Panel { BackColor=accent, Dock=DockStyle.Left, Width=5 });
+        var stripe = new Panel { Dock=DockStyle.Left, Width=5 };
+        card.Controls.Add(stripe);
         var open = new Button { Text=item.Name, TextAlign=ContentAlignment.MiddleLeft, Location=new Point(15, 9), Size=new Size(210,36), ForeColor=accent, FlatStyle=FlatStyle.Flat, Cursor=Cursors.Hand, AutoEllipsis=true, BackColor=Color.White };
         open.FlatAppearance.BorderSize = 0;
         open.Click += delegate { Edit(item); };
         var interval = new Label { Text="每 " + item.Minutes + " 分钟", ForeColor=Muted, TextAlign=ContentAlignment.MiddleRight, Size=new Size(116,34) };
         var toggle = new CheckBox { Appearance=Appearance.Button, Checked=item.Enabled, Text=item.Enabled?"开启":"关闭", TextAlign=ContentAlignment.MiddleCenter, ForeColor=Color.White, BackColor=item.Enabled?accent:Muted, Size=new Size(61,31), FlatStyle=FlatStyle.Flat, Cursor=Cursors.Hand, AccessibleName=item.Name+"开关" };
         toggle.FlatAppearance.BorderSize = 0;
+        Action updateAppearance = delegate {
+            Color inactive = ColorTranslator.FromHtml("#626872");
+            card.BackColor = item.Enabled ? Color.White : ColorTranslator.FromHtml("#E0E2E5");
+            stripe.BackColor = item.Enabled ? accent : ColorTranslator.FromHtml("#A1A5AB");
+            open.BackColor = card.BackColor;
+            open.ForeColor = item.Enabled ? accent : inactive;
+            interval.ForeColor = item.Enabled ? Muted : inactive;
+            toggle.Text = item.Enabled ? "已开启" : "已关闭";
+            toggle.BackColor = item.Enabled ? accent : ColorTranslator.FromHtml("#D0D3D8");
+            toggle.ForeColor = item.Enabled ? Color.White : ColorTranslator.FromHtml("#414750");
+        };
+        updateAppearance();
         toggle.CheckedChanged += delegate {
             item.Enabled=toggle.Checked;
             item.Due=DateTime.UtcNow.AddMinutes(item.Minutes);
-            toggle.Text=item.Enabled?"开启":"关闭";
-            toggle.BackColor=item.Enabled?accent:Muted;
+            updateAppearance();
             Save();
         };
         card.Resize += delegate {
