@@ -12,7 +12,11 @@
 
 点击提醒名称可以调整间隔。新建自定义提醒默认关闭。多个提醒同时到点时合并显示，弹窗提供「稍后 5 分钟」。关闭主窗口会收起到托盘，从托盘菜单可完全退出。
 
-## 构建和安装
+## 下载和安装
+
+[下载 Windows 安装包](downloads/TixingSetup.exe?raw=true)
+
+## 从源码构建
 
 在 Windows 上打开 PowerShell，在仓库目录运行以下命令。构建使用 Windows 的 .NET Framework 4.x C# 编译器。
 
